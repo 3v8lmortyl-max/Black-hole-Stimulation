@@ -1,4 +1,4 @@
-# Black-hole-Stimulation
+# 3D Blackhole visualization 
 
 This is a lightweight 3D black hole visualization optimized for mobile devices using Three.js.
 
