@@ -1,15 +1,413 @@
 <!DOCTYPE html>
-<html>
-<body style="margin:0;"><canvas id="gl" style="width:100vw;height:100vh"></canvas>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Black Hole</title>
+<style>
+  html,body{
+    height:100%;
+    margin:0;
+    background: #000000;
+    overflow:hidden;
+    touch-action: pan-x pan-y pinch-zoom;
+    user-select: none;
+  }
+
+  .space{
+    position:fixed;
+    inset:0;
+    perspective: 1500px;
+    perspective-origin: 50% 50%;
+    background: 
+      radial-gradient(1px 1px at 10% 20%, #ffffff60 50%, transparent 51%),
+      radial-gradient(1px 1px at 80% 10%, #ffffff40 50%, transparent 51%),
+      radial-gradient(1px 1px at 30% 70%, #ffffff50 50%, transparent 51%),
+      radial-gradient(1px 1px at 70% 80%, #ffffff30 50%, transparent 51%),
+      radial-gradient(1px 1px at 90% 50%, #ffffff60 50%, transparent 51%),
+      radial-gradient(1px 1px at 20% 90%, #ffffff40 50%, transparent 51%),
+      #000000;
+  }
+
+  .scene{
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:0;
+    height:0;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  .event-horizon{
+    position:absolute;
+    width: 120px;
+    height: 120px;
+    margin: -60px 0 0 -60px;
+    border-radius: 50%;
+    background: #000000;
+    box-shadow: 
+      inset 0 0 30px #000000,
+      0 0 50px 10px #00000080;
+    z-index: 100;
+  }
+
+  .accretion-main{
+    position:absolute;
+    width: 450px;
+    height: 450px;
+    margin: -225px 0 0 -225px;
+    border-radius: 50%;
+    background: 
+      radial-gradient(ellipse at center,
+        transparent 25%,
+        #ffa50080 30%,
+        #ff8c0090 35%,
+        #ffdd44a0 40%,
+        #fff3a0c0 45%,
+        #ffdd44a0 50%,
+        #ff8c0080 55%,
+        #ffa50060 60%,
+        transparent 65%
+      );
+    transform: rotateX(75deg);
+    animation: diskRotate 8s linear infinite;
+    filter: blur(1px);
+  }
+
+  .accretion-top{
+    position:absolute;
+    width: 360px;
+    height: 360px;
+    margin: -180px 0 0 -180px;
+    border-radius: 50%;
+    background: 
+      radial-gradient(ellipse at center,
+        transparent 30%,
+        #ffdd4460 35%,
+        #fff3a080 40%,
+        #ffdd4460 45%,
+        transparent 50%
+      );
+    transform: rotateX(-15deg) translateZ(50px);
+    animation: diskRotateTop 8s linear infinite;
+    filter: blur(2px);
+  }
+
+  .accretion-bottom{
+    position:absolute;
+    width: 270px;
+    height: 270px;
+    margin: -135px 0 0 -135px;
+    border-radius: 50%;
+    background: 
+      radial-gradient(ellipse at center,
+        transparent 40%,
+        #ff8c0040 45%,
+        #ffdd4450 50%,
+        #ff8c0040 55%,
+        transparent 60%
+      );
+    transform: rotateX(165deg) translateZ(-30px);
+    animation: diskRotateBottom 8s linear infinite reverse;
+    filter: blur(3px);
+  }
+
+  .accretion-inner{
+    position:absolute;
+    width: 180px;
+    height: 180px;
+    margin: -90px 0 0 -90px;
+    border-radius: 50%;
+    background: 
+      radial-gradient(ellipse at center,
+        transparent 35%,
+        #fff3a0 40%,
+        #ffffff 45%,
+        #fff3a0 50%,
+        transparent 55%
+      );
+    transform: rotateX(75deg);
+    animation: diskRotateInner 4s linear infinite;
+    filter: blur(0.5px);
+    z-index: 50;
+  }
+
+  .doppler-blue{
+    position:absolute;
+    width: 405px;
+    height: 405px;
+    margin: -202px 0 0 -202px;
+    background: 
+      linear-gradient(90deg,
+        #4488ff40 0%,
+        transparent 30%,
+        transparent 70%,
+        transparent 100%
+      );
+    border-radius: 50%;
+    transform: rotateX(75deg);
+    animation: diskRotate 8s linear infinite;
+    mix-blend-mode: screen;
+  }
+
+  .doppler-red{
+    position:absolute;
+    width: 405px;
+    height: 405px;
+    margin: -202px 0 0 -202px;
+    background: 
+      linear-gradient(270deg,
+        #ff444440 0%,
+        transparent 30%,
+        transparent 70%,
+        transparent 100%
+      );
+    border-radius: 50%;
+    transform: rotateX(75deg);
+    animation: diskRotate 8s linear infinite;
+    mix-blend-mode: screen;
+  }
+
+  .gravitational-halo{
+    position:absolute;
+    width: 495px;
+    height: 495px;
+    margin: -247px 0 0 -247px;
+    border: 3px solid transparent;
+    border-radius: 50%;
+    background: 
+      radial-gradient(circle,
+        transparent 70%,
+        #fff3a030 71%,
+        #ffdd4450 72%,
+        #fff3a030 73%,
+        transparent 74%
+      );
+    animation: haloShimmer 6s ease-in-out infinite;
+    filter: blur(1px);
+  }
+
+  .spacetime-warp{
+    position:absolute;
+    width: 900px;
+    height: 900px;
+    margin: -450px 0 0 -450px;
+    border: 1px solid #ffffff05;
+    border-radius: 50%;
+    animation: spacetimeRipple 20s ease-in-out infinite;
+  }
+
+  @keyframes diskRotate{
+    from{ transform: rotateX(75deg) rotateZ(0deg); }
+    to{ transform: rotateX(75deg) rotateZ(360deg); }
+  }
+
+  @keyframes diskRotateTop{
+    from{ transform: rotateX(-15deg) translateZ(50px) rotateZ(0deg); }
+    to{ transform: rotateX(-15deg) translateZ(50px) rotateZ(360deg); }
+  }
+
+  @keyframes diskRotateBottom{
+    from{ transform: rotateX(165deg) translateZ(-30px) rotateZ(0deg); }
+    to{ transform: rotateX(165deg) translateZ(-30px) rotateZ(360deg); }
+  }
+
+  @keyframes diskRotateInner{
+    from{ transform: rotateX(75deg) rotateZ(0deg); }
+    to{ transform: rotateX(75deg) rotateZ(360deg); }
+  }
+
+  @keyframes haloShimmer{
+    0%, 100%{ opacity: 0.6; transform: scale(1) rotateZ(0deg); }
+    50%{ opacity: 1; transform: scale(1.02) rotateZ(180deg); }
+  }
+
+  @keyframes spacetimeRipple{
+    0%, 100%{ transform: scale(1) rotate(0deg); opacity: 0.2; }
+    50%{ transform: scale(1.05) rotate(180deg); opacity: 0.4; }
+  }
+
+  .controls{
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #ffffff80;
+    text-align: center;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div class="space">
+    <div class="scene" id="scene">
+      
+      <div class="spacetime-warp"></div>
+      <div class="gravitational-halo"></div>
+      <div class="accretion-main"></div>
+      <div class="accretion-top"></div>
+      <div class="accretion-bottom"></div>
+      <div class="accretion-inner"></div>
+      <div class="doppler-blue"></div>
+      <div class="doppler-red"></div>
+      <div class="event-horizon"></div>
+      
+    </div>
+    
+    <div class="controls">
+                               Black Hole Stimulation,
+      Drag to rotate • Scroll/pinch to zoom • Two-finger to pan
+    </div>
+  </div>
+
 <script>
-var canvas = document.getElementById('gl');
-canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-var gl = canvas.getContext('webgl');
-if (!gl) { document.body.innerHTML = 'WebGL NOT supported'; throw 'NO WEBGL'; }
-gl.clearColor(0.1,0,0.2,1); gl.clear(gl.COLOR_BUFFER_BIT);
+let scene = document.getElementById('scene');
+let rotX = 10, rotY = 0, rotZ = 0;
+let zoom = 1;
+let panX = 0, panY = 0;
+
+let isDragging = false;
+let isPanning = false;
+let startX = 0, startY = 0;
+let lastTouchDistance = 0;
+
+function updateTransform() {
+  scene.style.transform = `
+    translateX(${panX}px) 
+    translateY(${panY}px) 
+    scale3d(${zoom}, ${zoom}, ${zoom}) 
+    rotateX(${rotX}deg) 
+    rotateY(${rotY}deg) 
+    rotateZ(${rotZ}deg)
+  `;
+}
+
+// Mouse events
+document.addEventListener('mousedown', (e) => {
+  if (e.button === 0) { // Left click - rotate
+    isDragging = true;
+  } else if (e.button === 2) { // Right click - pan  
+    isPanning = true;
+    e.preventDefault();
+  }
+  startX = e.clientX;
+  startY = e.clientY;
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    let deltaX = e.clientX - startX;
+    let deltaY = e.clientY - startY;
+    rotY += deltaX * 0.5;
+    rotX -= deltaY * 0.5;
+    rotX = Math.max(-90, Math.min(90, rotX)); // Clamp X rotation
+    startX = e.clientX;
+    startY = e.clientY;
+    updateTransform();
+  } else if (isPanning) {
+    panX += e.clientX - startX;
+    panY += e.clientY - startY;
+    startX = e.clientX;
+    startY = e.clientY;
+    updateTransform();
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  isPanning = false;
+});
+
+// Prevent context menu
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// Mouse wheel zoom
+document.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  let delta = e.deltaY > 0 ? 0.9 : 1.1;
+  zoom *= delta;
+  zoom = Math.max(0.1, Math.min(5, zoom)); // Clamp zoom
+  updateTransform();
+}, { passive: false });
+
+// Touch events
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    isDragging = true;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    isDragging = false;
+    isPanning = true;
+    let touch1 = e.touches[0];
+    let touch2 = e.touches[1];
+    lastTouchDistance = Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    );
+    startX = (touch1.clientX + touch2.clientX) / 2;
+    startY = (touch1.clientY + touch2.clientY) / 2;
+  }
+});
+
+document.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  
+  if (e.touches.length === 1 && isDragging) {
+    let deltaX = e.touches[0].clientX - startX;
+    let deltaY = e.touches[0].clientY - startY;
+    rotY += deltaX * 0.5;
+    rotX -= deltaY * 0.5;
+    rotX = Math.max(-90, Math.min(90, rotX));
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    updateTransform();
+  } else if (e.touches.length === 2) {
+    let touch1 = e.touches[0];
+    let touch2 = e.touches[1];
+    
+    // Pinch zoom
+    let currentDistance = Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    );
+    
+    if (lastTouchDistance > 0) {
+      let scale = currentDistance / lastTouchDistance;
+      zoom *= scale;
+      zoom = Math.max(0.1, Math.min(5, zoom));
+    }
+    lastTouchDistance = currentDistance;
+    
+    // Two finger pan
+    let currentX = (touch1.clientX + touch2.clientX) / 2;
+    let currentY = (touch1.clientY + touch2.clientY) / 2;
+    panX += currentX - startX;
+    panY += currentY - startY;
+    startX = currentX;
+    startY = currentY;
+    
+    updateTransform();
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', () => {
+  isDragging = false;
+  isPanning = false;
+  lastTouchDistance = 0;
+});
+
+// Initialize
+updateTransform();
+
+
+
 </script>
 </body>
 </html>
+
 
 
 
